@@ -46,7 +46,7 @@ pub struct CommandProfile {
     cwd_to_root: bool,
 
     /// A list of subcommands (currently defined as the first argument passed to the command) which
-    /// should be rejected because, not only must they be run un-sandboxed, their effects are
+    /// should be rejected because, not only must they be run unsandboxed, their effects are
     /// significant enough that the user should explicitly bypass the sandboxing wrapper to
     /// indicate their intent.
     ///
@@ -91,24 +91,40 @@ pub struct CommandProfile {
 /// 2. Must not contain whitespace (These fields don't take shell-quoted argument lists)
 /// 3. Must not be an empty string
 ///
-/// **TODO:** Switch to a `Result` so we can report *why* the string was rejected.
-///
 /// **TODO:** Unit test this (Including a note that the test doesn't currently cover the
 /// non-`path::MAIN_SEPARATOR` case that can only be tested on Windows, and a test using the Ogham
 /// whitespace character that doesn't look like whitespace since that could cause a desync between
 /// how different tools do their whitespace splitting.)
-fn is_bad_filename(value: &str) -> bool {
-    return value.is_empty() || value.chars().any(|x| path::is_separator(x) || x.is_whitespace());
+fn is_bad_filename(value: &str) -> Result<(), &str> {
+    if value.is_empty() {
+        return Err("empty string");
+    }
+
+    for codepoint in value.chars() {
+        if path::is_separator(codepoint) {
+            return Err("path separator");
+        } else if codepoint.is_whitespace() {
+            // Better to reject pathological file/command/subcommand names than accept bad data
+            // which could be potentially be exploited
+            //
+            // (How likely are you, really, to intend something like `cargo "make thing" ...`?)
+            return Err("shell argument list");
+        } else if codepoint == '\0' {
+            return Err("null byte");
+        }
+    }
+
+    Ok(())
 }
 
 /// Helper for running `is_bad_filename` on all members of an iterable
 macro_rules! check_name_list {
     ($list:expr, $msg:literal) => {
         for name in $list {
-            assert!(!is_bad_filename(name),
-                    "{}. Found path separator or whitespace: {:?}", $msg, name);
+            is_bad_filename(name)
+                .map_err(|err_msg| format!("Expected {}. Found {}: {:?}", $msg, err_msg, name))?
         }
-    }
+    };
 }
 
 impl CommandProfile {
@@ -117,20 +133,21 @@ impl CommandProfile {
     /// (Implemented manually rather than adding [validator](https://github.com/Keats/validator)
     /// as another point of trust in a tool meant to enforce security.)
     ///
-    /// **TODO:** Switch from panicking to a `Result` which accumulates *all* errors before
-    /// returning in time for first release.
-    fn validate(&self) {
-        check_name_list!(&self.root_marked_by, "Expected filename in 'root_marked_by'");
+    /// **TODO:** Switch to a better error type and don't stop at the first error.
+    fn validate(&self) -> Result<(), String> {
+        check_name_list!(&self.root_marked_by, "filename in 'root_marked_by'");
         check_name_list!(self.subcommand_aliases.keys(),
-            "Expected subcommand in 'subcommand_aliases' key");
+            "subcommand in 'subcommand_aliases' key");
         check_name_list!(self.subcommand_aliases.values(),
-            "Expected subcommand in 'subcommand_aliases' value");
+            "subcommand in 'subcommand_aliases' value");
         check_name_list!(&self.allow_network_subcommands,
-            "Expected subcommand in 'allow_network_subcommands' value");
+            "subcommand in 'allow_network_subcommands' value");
         check_name_list!(&self.deny_subcommands,
-            "Expected subcommand in 'deny_subcommands' value");
+            "subcommand in 'deny_subcommands' value");
         check_name_list!(&self.projectless_subcommands,
-            "Expected subcommand in 'projectless_subcommands' value");
+            "subcommand in 'projectless_subcommands' value");
+
+        Ok(())
     }
 }
 
@@ -155,15 +172,18 @@ impl Config {
     /// (Implemented manually rather than adding [validator](https://github.com/Keats/validator)
     /// as another point of trust in a tool meant to enforce security.)
     ///
-    /// **TODO:** Switch from panicking to a `Result` which accumulates *all* errors before
-    /// returning in time for first release.
-    pub fn validate(&self) {
+    /// **TODO:** Switch to a better error type and don't stop at the first error.
+    pub fn validate(&self) -> Result<(), String> {
         check_name_list!(&self.root_blacklist, "Expected filename in 'root_blacklist'");
         check_name_list!(self.profiles.keys(), "Expected command name as profile name");
-        assert!(!self.profiles.is_empty(), "Configuration file must contain at least one profile");
-        for profile in self.profiles.values() {
-            profile.validate();
+
+        if self.profiles.is_empty() {
+            return Err("Configuration file must contain at least one profile".into());
         }
+        for profile in self.profiles.values() {
+            profile.validate()?;
+        }
+        Ok(())
     }
 }
 
@@ -202,7 +222,7 @@ mod test {
         assert_eq!(profile.cwd_to_root, false);
     }
 
-    /// Assert that the Serde-level defaults for the top-level config are as un-surprising
+    /// Assert that the Serde-level defaults for the top-level config are as unsurprising
     /// as possible. (Important in a security tool)
     #[test]
     fn unsurprising_toplevel_defaults() {

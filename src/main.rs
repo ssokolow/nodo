@@ -19,8 +19,8 @@ mod config;
 fn main() -> Result<(), Box<dyn Error>> {
     let config: config::Config = toml::from_str(config::DEFAULT_CONFIG)?;
 
-    // TODO: Integration test this
-    config.validate();
+    // TODO: Integration test this and use prettier human-readable output
+    config.validate().unwrap();
 
     // TODO: Actually use the config
     println!("{:#?}", config);
