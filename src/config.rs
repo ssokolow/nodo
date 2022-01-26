@@ -135,16 +135,20 @@ impl CommandProfile {
     /// **TODO:** Switch to a better error type and don't stop at the first error.
     fn validate(&self) -> Result<(), String> {
         check_name_list!(&self.root_marked_by, "filename in 'root_marked_by'");
-        check_name_list!(self.subcommand_aliases.keys(),
-            "subcommand in 'subcommand_aliases' key");
-        check_name_list!(self.subcommand_aliases.values(),
-            "subcommand in 'subcommand_aliases' value");
-        check_name_list!(&self.allow_network_subcommands,
-            "subcommand in 'allow_network_subcommands' value");
-        check_name_list!(&self.deny_subcommands,
-            "subcommand in 'deny_subcommands' value");
-        check_name_list!(&self.projectless_subcommands,
-            "subcommand in 'projectless_subcommands' value");
+        check_name_list!(self.subcommand_aliases.keys(), "subcommand in 'subcommand_aliases' key");
+        check_name_list!(
+            self.subcommand_aliases.values(),
+            "subcommand in 'subcommand_aliases' value"
+        );
+        check_name_list!(
+            &self.allow_network_subcommands,
+            "subcommand in 'allow_network_subcommands' value"
+        );
+        check_name_list!(&self.deny_subcommands, "subcommand in 'deny_subcommands' value");
+        check_name_list!(
+            &self.projectless_subcommands,
+            "subcommand in 'projectless_subcommands' value"
+        );
 
         Ok(())
     }
@@ -163,7 +167,6 @@ pub struct Config {
     #[serde(rename = "profile")]
     profiles: BTreeMap<String, CommandProfile>,
 }
-
 
 impl Config {
     /// Perform validation beyond what Serde is capable of
