@@ -19,6 +19,11 @@ use std::path;
 
 use serde_derive::{Deserialize, Serialize};
 
+/// The contents of the default configuration file that is used if nothing else is found
+///
+/// **TODO:** Actually implement support for loading a non-default config file
+const DEFAULT_CONFIG: &str = include_str!("defaults.toml");
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize)]
 /// The schema for a single command's sandboxing profile, with "single command" defined as the
@@ -175,6 +180,13 @@ impl Config {
 
 
 fn main() -> Result<(), Box<dyn Error>> {
+    let config: Config = toml::from_str(DEFAULT_CONFIG)?;
+
+    // TODO: Integration test this
+    config.validate();
+
+    // TODO: Actually use the config
+    println!("{:#?}", config);
     Ok(())
 }
 

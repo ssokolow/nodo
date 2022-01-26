@@ -1,0 +1,19 @@
+# Default list of paths (relative to the project root) to be denied
+# access to (The idea being to provide an analogue to `chattr +a foo.log`
+# so `git diff` can be used to reveal shenanigans)
+root_blacklist=[".git", ".hg", ".bzr", ".svn"]
+
+[profile.cargo]
+allow_network_subcommands=["add", "audit", "build", "check", "clippy", "doc",
+    "fetch", "geiger", "generate-lockfile", "outdated", "publish", "run",
+    "rustc", "rustdoc", "search", "test", "tree", "update", "upgrade",
+    "vendor", "yank"]
+deny_subcommands=["install", "login", "logout", "owner", "uninstall"]  # must be run unconstrained
+projectless_subcommands=["init", "new"] # Assume $PWD is project root
+root_marked_by=["Cargo.toml"]
+root_find_outermost=true  # For workspaces
+subcommand_aliases = {b="build", c="check", d="doc", r="run", t="test"}
+
+[profile.make]
+cwd_to_root=true  # run `make` in project root no matter where `nodo make` is run from
+root_marked_by=["Makefile"]
