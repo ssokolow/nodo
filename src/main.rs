@@ -88,6 +88,55 @@ struct CommandProfile {
     subcommand_aliases: BTreeMap<String, String>,
 }
 
+/// Check for likely misunderstandings in a field expecting a file/command/subcommand name.
+///
+/// 1. Must not contain a path separator (Don't let users specify a path when a names are expected)
+/// 2. Must not contain whitespace (These fields don't take shell-quoted argument lists)
+/// 3. Must not be an empty string
+///
+/// **TODO:** Switch to a `Result` so we can report *why* the string was rejected.
+///
+/// **TODO:** Unit test this (Including a note that the test doesn't currently cover the
+/// non-`path::MAIN_SEPARATOR` case that can only be tested on Windows, and a test using the Ogham
+/// whitespace character that doesn't look like whitespace since that could cause a desync between
+/// how different tools do their whitespace splitting.)
+fn is_bad_filename(value: &str) -> bool {
+    return value.is_empty() || value.chars().any(|x| path::is_separator(x) || x.is_whitespace());
+}
+
+/// Helper for running `is_bad_filename` on all members of an iterable
+macro_rules! check_name_list {
+    ($list:expr, $msg:literal) => {
+        for name in $list {
+            assert!(!is_bad_filename(name),
+                    "{}. Found path separator or whitespace: {:?}", $msg, name);
+        }
+    }
+}
+
+impl CommandProfile {
+    /// Perform validation beyond what Serde is capable of
+    ///
+    /// (Implemented manually rather than adding [validator](https://github.com/Keats/validator)
+    /// as another point of trust in a tool meant to enforce security.)
+    ///
+    /// **TODO:** Switch from panicking to a `Result` which accumulates *all* errors before
+    /// returning in time for first release.
+    fn validate(&self) {
+        check_name_list!(&self.root_marked_by, "Expected filename in 'root_marked_by'");
+        check_name_list!(self.subcommand_aliases.keys(),
+            "Expected subcommand in 'subcommand_aliases' key");
+        check_name_list!(self.subcommand_aliases.values(),
+            "Expected subcommand in 'subcommand_aliases' value");
+        check_name_list!(&self.allow_network_subcommands,
+            "Expected subcommand in 'allow_network_subcommands' value");
+        check_name_list!(&self.deny_subcommands,
+            "Expected subcommand in 'deny_subcommands' value");
+        check_name_list!(&self.projectless_subcommands,
+            "Expected subcommand in 'projectless_subcommands' value");
+    }
+}
+
 /// The schema for the configuration file which controls sandboxing behaviour
 #[derive(Debug, Deserialize, Serialize)]
 struct Config {
@@ -101,6 +150,26 @@ struct Config {
     #[serde(rename = "profile")]
     profiles: BTreeMap<String, CommandProfile>,
 }
+
+
+impl Config {
+    /// Perform validation beyond what Serde is capable of
+    ///
+    /// (Implemented manually rather than adding [validator](https://github.com/Keats/validator)
+    /// as another point of trust in a tool meant to enforce security.)
+    ///
+    /// **TODO:** Switch from panicking to a `Result` which accumulates *all* errors before
+    /// returning in time for first release.
+    fn validate(&self) {
+        check_name_list!(&self.root_blacklist, "Expected filename in 'root_blacklist'");
+        check_name_list!(self.profiles.keys(), "Expected command name as profile name");
+        assert!(!self.profiles.is_empty(), "Configuration file must contain at least one profile");
+        for profile in self.profiles.values() {
+            profile.validate();
+        }
+    }
+}
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
@@ -150,4 +219,8 @@ mod test {
         assert!(profile.subcommand_aliases.is_empty());
         assert_eq!(profile.root_find_outermost, false);
     }
+
+    // TODO: test the validate() methods and ensure they cannot be refactored to `&mut self`
+    // (Which would make it easier for the other tests to fall out of sync with what they're
+    // supposed to be asserting)
 }
