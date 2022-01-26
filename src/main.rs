@@ -15,6 +15,7 @@
 use std::error::Error;
 
 mod config;
+mod types;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let config: config::Config = toml::from_str(config::DEFAULT_CONFIG)?;

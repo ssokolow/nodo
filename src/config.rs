@@ -3,10 +3,10 @@
 //! **TODO:** beta-read and improve `cargo doc` output.
 
 use std::collections::BTreeMap; // Used to preserve key ordering in Debug output
-use std::ops::Not;
-use std::path;
 
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+
+use crate::types::{CommandName, FileName, SubcommandName};
 
 /// The contents of the default configuration file that is used if nothing else is found
 ///
@@ -14,13 +14,11 @@ use serde_derive::{Deserialize, Serialize};
 pub const DEFAULT_CONFIG: &str = include_str!("defaults.toml");
 
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 /// The schema for a single command's sandboxing profile, with "single command" defined as the
 /// value of `argv[0]` when it is being spawned as a subprocess.
 ///
 /// **TODO:** Consider replacing the bools with non-conflatable enums
-///
-/// **TODO:** Consider replacing the use of `String` with newtypes that validate on construction
 pub struct CommandProfile {
     /// If `true`, allow the sandboxed program unrestricted network communication.
     ///
@@ -28,8 +26,8 @@ pub struct CommandProfile {
     /// subprocesses it launches.
     ///
     /// **NOTE:** It is recommended to leave this set to `false` and selectively override it using
-    /// `allow_network_subcommands`.
-    #[serde(default, skip_serializing_if = "Not::not")]
+    /// `allow_network_subcommands` if the command has subcommands.
+    #[serde(default)]
     allow_network: bool,
 
     /// A list of subcommands (currently defined as the first argument passed to the command) which
@@ -39,14 +37,14 @@ pub struct CommandProfile {
     ///
     /// **TODO:** Decide whether retrofitting smarter subcommand handling later would be
     /// a potential security risk.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    allow_network_subcommands: Vec<String>,
+    #[serde(default)]
+    allow_network_subcommands: Vec<SubcommandName>,
 
     /// If `true`, launch the sandboxed command with the working directory set to the sandbox root.
     ///
     /// This is useful for allowing commands like `make` to be invoked from anywhere within the
     /// project hierarchy.
-    #[serde(default, skip_serializing_if = "Not::not")]
+    #[serde(default)]
     cwd_to_root: bool,
 
     /// A list of subcommands (currently defined as the first argument passed to the command) which
@@ -56,8 +54,8 @@ pub struct CommandProfile {
     ///
     /// **TODO:** Decide whether retrofitting smarter subcommand handling later would be
     /// a potential security risk.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    deny_subcommands: Vec<String>,
+    #[serde(default)]
+    deny_subcommands: Vec<SubcommandName>,
 
     /// A list of subcommands (currently defined as the first argument passed to the command) which
     /// should treat the current working directory as the sandbox root.
@@ -67,12 +65,12 @@ pub struct CommandProfile {
     ///
     /// **TODO:** Decide whether retrofitting smarter subcommand handling later would be
     /// a potential security risk.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    projectless_subcommands: Vec<String>,
+    #[serde(default)]
+    projectless_subcommands: Vec<SubcommandName>,
 
     /// If any of the file/directory names in this list are present, choose the directory they
     /// appear in to be the root of the sandbox.
-    root_marked_by: Vec<String>,
+    root_marked_by: Vec<FileName>,
 
     /// If `false`, treat the nearest ancestor containing one of the `root_marked_by` files or
     /// directories as the sandbox root.
@@ -80,110 +78,43 @@ pub struct CommandProfile {
     /// If `true`, walk all the way up to the filesystem root and then take the last match
     /// encountered to be the sandbox root. (This is useful for systems like Cargo Workspaces which
     /// appear as child projects within a parent project.)
-    #[serde(default, skip_serializing_if = "Not::not")]
+    #[serde(default)]
     root_find_outermost: bool,
 
     /// A list of subcommand names which should be treated as aliases for other subcommand names
     /// when looking up what sandboxing profile to apply.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    subcommand_aliases: BTreeMap<String, String>,
-}
-
-/// Check for likely misunderstandings in a field expecting a file/command/subcommand name.
-///
-/// 1. Must not contain a path separator (Don't let users specify a path when a names are expected)
-/// 2. Must not contain whitespace (These fields don't take shell-quoted argument lists)
-/// 3. Must not be an empty string
-fn is_bad_filename(value: &str) -> Result<(), &str> {
-    if value.is_empty() {
-        return Err("empty string");
-    }
-
-    for codepoint in value.chars() {
-        if path::is_separator(codepoint) {
-            return Err("path separator");
-        } else if codepoint.is_whitespace() {
-            // Better to reject pathological file/command/subcommand names than accept bad data
-            // which could be potentially be exploited
-            //
-            // (How likely are you, really, to intend something like `cargo "make thing" ...`?)
-            return Err("shell argument list");
-        } else if codepoint == '\0' {
-            return Err("null byte");
-        }
-    }
-
-    Ok(())
-}
-
-/// Helper for running `is_bad_filename` on all members of an iterable
-macro_rules! check_name_list {
-    ($list:expr, $msg:literal) => {
-        for name in $list {
-            is_bad_filename(name)
-                .map_err(|err_msg| format!("Expected {}. Found {}: {:?}", $msg, err_msg, name))?
-        }
-    };
-}
-
-impl CommandProfile {
-    /// Perform validation beyond what Serde is capable of
-    ///
-    /// (Implemented manually rather than adding [validator](https://github.com/Keats/validator)
-    /// as another point of trust in a tool meant to enforce security.)
-    ///
-    /// **TODO:** Switch to a better error type and don't stop at the first error.
-    fn validate(&self) -> Result<(), String> {
-        check_name_list!(&self.root_marked_by, "filename in 'root_marked_by'");
-        check_name_list!(self.subcommand_aliases.keys(), "subcommand in 'subcommand_aliases' key");
-        check_name_list!(
-            self.subcommand_aliases.values(),
-            "subcommand in 'subcommand_aliases' value"
-        );
-        check_name_list!(
-            &self.allow_network_subcommands,
-            "subcommand in 'allow_network_subcommands' value"
-        );
-        check_name_list!(&self.deny_subcommands, "subcommand in 'deny_subcommands' value");
-        check_name_list!(
-            &self.projectless_subcommands,
-            "subcommand in 'projectless_subcommands' value"
-        );
-
-        Ok(())
-    }
+    #[serde(default)]
+    subcommand_aliases: BTreeMap<SubcommandName, SubcommandName>,
 }
 
 /// The schema for the configuration file which controls sandboxing behaviour
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct Config {
-    /// A default list of root-relative paths to be denied access to
-    /// (The idea being to provide an analogue to `chattr +a foo.log`
-    /// so `git diff` can be used to reveal shenanigans)
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    root_blacklist: Vec<String>,
+    /// A default list of root-relative paths to be denied access to. (The idea being to provide an
+    /// analogue to `chattr +a foo.log` so `git diff` can be used to reveal shenanigans)
+    #[serde(default)]
+    root_blacklist: Vec<FileName>,
 
     /// A list of mappings from command names (`argv[0]`) to the sandboxing profiles to use on them
     #[serde(rename = "profile")]
-    profiles: BTreeMap<String, CommandProfile>,
+    profiles: BTreeMap<CommandName, CommandProfile>,
 }
 
 impl Config {
-    /// Perform validation beyond what Serde is capable of
+    /// Perform validation beyond what Serde is maintainably capable of
     ///
     /// (Implemented manually rather than adding [validator](https://github.com/Keats/validator)
     /// as another point of trust in a tool meant to enforce security.)
     ///
     /// **TODO:** Switch to a better error type and don't stop at the first error.
-    pub fn validate(&self) -> Result<(), String> {
-        check_name_list!(&self.root_blacklist, "Expected filename in 'root_blacklist'");
-        check_name_list!(self.profiles.keys(), "Expected command name as profile name");
-
+    pub fn validate(&self) -> Result<(), &'static str> {
         if self.profiles.is_empty() {
-            return Err("Configuration file must contain at least one profile".into());
+            return Err("Configuration file must contain at least one profile");
         }
         for profile in self.profiles.values() {
-            profile.validate()?;
+            if profile.root_marked_by.is_empty() {
+                return Err("'root_marked_by' must contain at least one file/folder name");
+            }
         }
         Ok(())
     }
@@ -192,49 +123,25 @@ impl Config {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::convert::TryFrom;
 
-    /// Assert that is_bad_filename rejects supposed filenames/commands/subcommands that are
-    /// impossible because they're empty strings or contain binary nulls or path separators
+    /// Assert that a failure to specify at least one profile or a failure to include
+    /// a `root_marked_by` field in the profile will be caught at TOML parsing time
+    /// and that `.validate()` will reject empty `Vec`s.
     #[test]
-    fn is_bad_filename_rejects_impossible_values() {
-        assert_eq!(is_bad_filename("control"), Ok(()));
-        assert_eq!(is_bad_filename("control-2"), Ok(()));
-
-        assert_eq!(is_bad_filename(""), Err("empty string"));
-        assert_eq!(is_bad_filename("contains\0null"), Err("null byte"));
-
-        // On Windows, this should test / and \ while, on POSIX platforms, it should do / twice
-        assert_eq!(is_bad_filename("contrib/do_it"), Err("path separator"));
-        assert_eq!(
-            is_bad_filename(&format!("contrib{}do_it", path::MAIN_SEPARATOR)),
-            Err("path separator")
-        );
-    }
-
-    /// Assert that is_bad_filename rejects whitespace to protect against footguns
-    #[test]
-    fn is_bad_filename_whitespace_check_is_thorough() {
-        assert_eq!(is_bad_filename("control"), Ok(()));
-        assert_eq!(is_bad_filename("control-2"), Ok(()));
-
-        assert_eq!(is_bad_filename("contains space"), Err("shell argument list"));
-        assert_eq!(is_bad_filename("contains\ttab"), Err("shell argument list"));
-        assert_eq!(is_bad_filename("contains\nnewline"), Err("shell argument list"));
-
-        // The most misleading case that relying on .is_whitespace() should catch
-        assert_eq!(is_bad_filename("contains ogham space"), Err("shell argument list"));
-
-        // TODO: Decide how things like U+2800 BRAILLE PATTERN BLANK should be handled,
-        // which *appear* to be whitespace but aren't.
-    }
-
-    // TODO: Unit tests which verify that the `?` in `check_name_list` didn't get refactored away.
-
-    /// Assert that a failure to specify `root_marked_by` will be caught at TOML parsing time
-    #[test]
-    fn root_marked_by_required() {
-        toml::from_str::<CommandProfile>("").unwrap_err();
-        toml::from_str::<CommandProfile>("root_marked_by = [\"Makefile\"]").unwrap();
+    fn profiles_required() {
+        toml::from_str::<Config>("").unwrap_err();
+        toml::from_str::<Config>("profile = {}").unwrap().validate().unwrap_err();
+        toml::from_str::<Config>("[profile.make]").unwrap_err();
+        toml::from_str::<Config>("[profile.make]\nroot_marked_by = []")
+            .unwrap()
+            .validate()
+            .unwrap_err();
+        toml::from_str::<Config>("[profile.make]\nroot_marked_by = [\"\"]").unwrap_err();
+        toml::from_str::<Config>("[profile.make]\nroot_marked_by = [\"Makefile\"]")
+            .unwrap()
+            .validate()
+            .unwrap();
     }
 
     /// Assert that the field defaults for a profile are the most secure options
@@ -253,16 +160,21 @@ mod test {
     /// default behaviour
     #[test]
     fn unsurprising_profile_defaults() {
-        let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
-        // Just to be thorough
-        assert_eq!(profile.root_marked_by, ["foo"]);
+        // Verify that the default for `root_marked_by` isn't going to undermine .validate()
+        let profile: CommandProfile = toml::from_str("root_marked_by=[]").unwrap();
+        assert_eq!(profile.root_marked_by, []);
 
-        // What we actually care about
+        // Verify that `cwd_to_root` and `deny_subcommands` aren't going to do something surprising
+        let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
+        assert!(profile.deny_subcommands.is_empty());
         assert_eq!(profile.cwd_to_root, false);
+
+        // Just to be thorough
+        assert_eq!(profile.root_marked_by, [FileName::try_from("foo".to_owned()).unwrap()]);
     }
 
-    /// Assert that the Serde-level defaults for the top-level config are as unsurprising
-    /// as possible. (Important in a security tool)
+    /// Assert that the Serde-level defaults for the top-level config, before `.validate()` is run,
+    /// aren't going to undermine `.validate()`.
     #[test]
     fn unsurprising_toplevel_defaults() {
         let config: Config = toml::from_str("profile = {}").unwrap();
