@@ -1,3 +1,8 @@
+//! A simple utility for launching build automation tools inside a Firejail sandbox without having
+//! to manually create a new profile for each project you work on.
+//!
+//! Copyright (c) 2021,2022 Stephan Sokolow
+
 #![warn(clippy::all, clippy::pedantic, clippy::restriction, clippy::cargo)]
 #![allow(
     clippy::implicit_return,
