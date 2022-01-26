@@ -10,10 +10,10 @@
 use std::collections::BTreeMap; // Used to preserve key ordering in Debug output
 use std::error::Error;
 use std::ops::Not;
+use std::path;
 
 use serde_derive::{Deserialize, Serialize};
 
-// TODO: Validate that all Vec<String> fields contain no empty strings
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize)]
 /// The schema for a single command's sandboxing profile, with "single command" defined as the
@@ -26,8 +26,6 @@ struct CommandProfile {
     ///
     /// **NOTE:** It is recommended to leave this set to `false` and selectively override it using
     /// `allow_network_subcommands`.
-    ///
-    /// **TODO:** Unit test to ensure the default remains `false` when refactoring things
     #[serde(default, skip_serializing_if = "Not::not")]
     allow_network: bool,
 
@@ -180,32 +178,10 @@ mod test {
     use super::*;
 
     /// Assert that a failure to specify `root_marked_by` will be caught at TOML parsing time
+    #[test]
     fn root_marked_by_required() {
-        let config: Result<CommandProfile, _> = toml::from_str("");
-        assert!(config.is_err());
-
-        let config: CommandProfile = toml::from_str("root_marked_by = [\"Makefile\"]").unwrap();
-    }
-
-    /// Assert that the top-level config defaults are as un-surprising as possible
-    /// (Important in a security tool)
-    #[test]
-    fn unsurprising_toplevel_defaults() {
-        // TODO: Disallow this in the validation stage
-        let config: Config = toml::from_str("profile = {}").unwrap();
-
-        assert!(config.profiles.is_empty());
-        assert!(config.root_blacklist.is_empty());
-    }
-
-    /// Assert that profile fields not directly related to security have unsurprising
-    /// default behaviour
-    #[test]
-    fn unsurprising_profile_defaults() {
-        let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
-
-        assert_eq!(profile.cwd_to_root, false);
-        assert_eq!(profile.root_marked_by, ["foo"]);
+        toml::from_str::<CommandProfile>("").unwrap_err();
+        toml::from_str::<CommandProfile>("root_marked_by = [\"Makefile\"]").unwrap();
     }
 
     /// Assert that the field defaults for a profile are the most secure options
@@ -218,6 +194,27 @@ mod test {
         assert!(profile.projectless_subcommands.is_empty());
         assert!(profile.subcommand_aliases.is_empty());
         assert_eq!(profile.root_find_outermost, false);
+    }
+
+    /// Assert that profile fields not directly related to security have unsurprising
+    /// default behaviour
+    #[test]
+    fn unsurprising_profile_defaults() {
+        let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
+        // Just to be thorough
+        assert_eq!(profile.root_marked_by, ["foo"]);
+
+        // What we actually care about
+        assert_eq!(profile.cwd_to_root, false);
+    }
+
+    /// Assert that the Serde-level defaults for the top-level config are as un-surprising
+    /// as possible. (Important in a security tool)
+    #[test]
+    fn unsurprising_toplevel_defaults() {
+        let config: Config = toml::from_str("profile = {}").unwrap();
+        assert!(config.profiles.is_empty());
+        assert!(config.root_blacklist.is_empty());
     }
 
     // TODO: test the validate() methods and ensure they cannot be refactored to `&mut self`
