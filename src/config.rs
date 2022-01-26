@@ -17,6 +17,10 @@ pub const DEFAULT_CONFIG: &str = include_str!("defaults.toml");
 #[derive(Debug, Deserialize, Serialize)]
 /// The schema for a single command's sandboxing profile, with "single command" defined as the
 /// value of `argv[0]` when it is being spawned as a subprocess.
+///
+/// **TODO:** Consider replacing the bools with non-conflatable enums
+///
+/// **TODO:** Consider replacing the use of `String` with newtypes that validate on construction
 pub struct CommandProfile {
     /// If `true`, allow the sandboxed program unrestricted network communication.
     ///
@@ -90,11 +94,6 @@ pub struct CommandProfile {
 /// 1. Must not contain a path separator (Don't let users specify a path when a names are expected)
 /// 2. Must not contain whitespace (These fields don't take shell-quoted argument lists)
 /// 3. Must not be an empty string
-///
-/// **TODO:** Unit test this (Including a note that the test doesn't currently cover the
-/// non-`path::MAIN_SEPARATOR` case that can only be tested on Windows, and a test using the Ogham
-/// whitespace character that doesn't look like whitespace since that could cause a desync between
-/// how different tools do their whitespace splitting.)
 fn is_bad_filename(value: &str) -> Result<(), &str> {
     if value.is_empty() {
         return Err("empty string");
@@ -190,6 +189,43 @@ impl Config {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    /// Assert that is_bad_filename rejects supposed filenames/commands/subcommands that are
+    /// impossible because they're empty strings or contain binary nulls or path separators
+    #[test]
+    fn is_bad_filename_rejects_impossible_values() {
+        assert_eq!(is_bad_filename("control"), Ok(()));
+        assert_eq!(is_bad_filename("control-2"), Ok(()));
+
+        assert_eq!(is_bad_filename(""), Err("empty string"));
+        assert_eq!(is_bad_filename("contains\0null"), Err("null byte"));
+
+        // On Windows, this should test / and \ while, on POSIX platforms, it should do / twice
+        assert_eq!(is_bad_filename("contrib/do_it"), Err("path separator"));
+        assert_eq!(
+            is_bad_filename(&format!("contrib{}do_it", path::MAIN_SEPARATOR)),
+            Err("path separator")
+        );
+    }
+
+    /// Assert that is_bad_filename rejects whitespace to protect against footguns
+    #[test]
+    fn is_bad_filename_whitespace_check_is_thorough() {
+        assert_eq!(is_bad_filename("control"), Ok(()));
+        assert_eq!(is_bad_filename("control-2"), Ok(()));
+
+        assert_eq!(is_bad_filename("contains space"), Err("shell argument list"));
+        assert_eq!(is_bad_filename("contains\ttab"), Err("shell argument list"));
+        assert_eq!(is_bad_filename("contains\nnewline"), Err("shell argument list"));
+
+        // The most misleading case that relying on .is_whitespace() should catch
+        assert_eq!(is_bad_filename("contains ogham space"), Err("shell argument list"));
+
+        // TODO: Decide how things like U+2800 BRAILLE PATTERN BLANK should be handled,
+        // which *appear* to be whitespace but aren't.
+    }
+
+    // TODO: Unit tests which verify that the `?` in `check_name_list` didn't get refactored away.
 
     /// Assert that a failure to specify `root_marked_by` will be caught at TOML parsing time
     #[test]
