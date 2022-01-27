@@ -51,7 +51,7 @@ newtype!(SubcommandName, "`argv[1]` as seen by wrapped commands for use as subco
 /// # Note to Future Maintainers
 ///
 /// 1. This is private because, if you need to use it without using/creating a newtype in
-/// this module, you should probably re-think your design.
+///    this module, you should probably re-think your design.
 ///
 /// 2. This rejects whitespace because it's better to reject pathological file/command/subcommand
 ///    names than to accept the *much* more likely case that the user has entered bad data that

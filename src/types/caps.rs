@@ -48,7 +48,10 @@ macro_rules! make_capability {
     };
 }
 
-make_capability!(Network, ChildProcsOnly, AllNetworks,
+make_capability!(
+    Network,
+    ChildProcsOnly,
+    AllNetworks,
     "Scope of network access",
     "Launch the program in its own network namespace so it can only communicate with subprocesses it launches.",
     "Allow unrestricted network communication.");
