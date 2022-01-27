@@ -1,6 +1,6 @@
 //! Configuration file schema and supplementary validation routines
 
-use std::collections::BTreeMap; // Used to preserve key ordering in Debug output
+use std::collections::BTreeMap; // Used to ensure deterministic key ordering in Debug output
 
 use serde_derive::Deserialize;
 
