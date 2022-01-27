@@ -5,7 +5,7 @@
 # specialized needs. For example:
 #
 # - If you store your projects on removable media, remove `--blacklist=/media`
-# - If you need to play sounds, remove both `--nosound` and `--noautopulse`
+# - If you need to play sounds, remove `--nosound`
 # - If you need access to serial ports, remove `--nogroups` since that is
 #   typically achieved via membership in the `dialout` group.
 # - If you need to display a GUI, remove `--no3d`, since
@@ -38,7 +38,6 @@ firejail_base_flags=[
     "--nonewprivs",
     "--noroot",
     "--nosound",
-    "--noautopulse",
     "--novideo",
     "--nou2f",
     "--private-dev",
