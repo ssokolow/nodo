@@ -4,6 +4,8 @@ use std::path;
 
 use serde_derive::Deserialize;
 
+pub mod caps;
+
 /// Helper for creating newtypes for string config fields that should not be conflated
 ///
 /// (eg. So it's a compile time error to conflate an `argv[0]` and an `argv[1]` value)

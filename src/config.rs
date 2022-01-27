@@ -4,7 +4,7 @@ use std::collections::BTreeMap; // Used to preserve key ordering in Debug output
 
 use serde_derive::Deserialize;
 
-use crate::types::{CommandName, FileName, SubcommandName};
+use crate::types::{caps, CommandName, FileName, SubcommandName};
 
 /// The contents of the default configuration file that is used if nothing else is found
 ///
@@ -32,7 +32,7 @@ pub struct CommandProfile {
     /// **NOTE:** It is recommended to leave this set to `false` and selectively override it using
     /// `allow_network_subcommands` if the command has subcommands.
     #[serde(default)]
-    allow_network: bool,
+    allow_network: caps::Network,
 
     /// A list of subcommands which should be allowed unrestricted network access.
     ///
@@ -65,7 +65,7 @@ pub struct CommandProfile {
     /// encountered to be the sandbox root. (This is useful for systems like Cargo Workspaces which
     /// appear as child projects within a parent project.)
     #[serde(default)]
-    root_find_outermost: bool,
+    root_find_outermost: caps::ProjectRoot,
 
     /// A list of subcommand names which should be treated as aliases for other subcommand names
     /// when looking up what sandboxing profile to apply.
@@ -135,11 +135,11 @@ mod test {
     fn safe_profile_defaults() {
         let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
 
-        assert_eq!(profile.allow_network, false);
+        assert_eq!(profile.allow_network, caps::Network::ChildProcsOnly);
         assert!(profile.allow_network_subcommands.is_empty());
         assert!(profile.projectless_subcommands.is_empty());
         assert!(profile.subcommand_aliases.is_empty());
-        assert_eq!(profile.root_find_outermost, false);
+        assert_eq!(profile.root_find_outermost, caps::ProjectRoot::Innermost);
     }
 
     /// Assert that profile fields not directly related to security have unsurprising
