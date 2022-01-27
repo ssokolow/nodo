@@ -66,6 +66,7 @@ fn is_bad_name(name: &str) -> Result<(), &'static str> {
     }
 
     for codepoint in name.chars() {
+        #[allow(clippy::else_if_without_else)]
         if path::is_separator(codepoint) {
             return Err("path separator");
         } else if codepoint.is_whitespace() {
