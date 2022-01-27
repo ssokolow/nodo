@@ -15,5 +15,9 @@ root_find_outermost=true  # For workspaces
 subcommand_aliases = {b="build", c="check", d="doc", r="run", t="test"}
 
 [profile.make]
-cwd_to_root=true  # run `make` in project root no matter where `nodo make` is run from
 root_marked_by=["Makefile"]
+root_find_outermost=true  # Large projects often use multiple Makefiles
+
+# TODO: Decide how to special case ~/.git and the like so they can't act as
+# misdirections for the system if someone combines root_marked_by=[".git"] with
+# root_find_outermost=true.

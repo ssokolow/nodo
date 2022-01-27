@@ -40,13 +40,6 @@ pub struct CommandProfile {
     #[serde(default)]
     allow_network_subcommands: Vec<SubcommandName>,
 
-    /// If `true`, launch the sandboxed command with the working directory set to the sandbox root.
-    ///
-    /// This is useful for allowing commands like `make` to be invoked from anywhere within the
-    /// project hierarchy.
-    #[serde(default)]
-    cwd_to_root: bool,
-
     /// A list of subcommands which should be rejected because, not only must they be run
     /// unsandboxed, their effects are significant enough that the user should explicitly bypass
     /// the sandboxing wrapper to indicate their intent.
@@ -157,10 +150,9 @@ mod test {
         let profile: CommandProfile = toml::from_str("root_marked_by=[]").unwrap();
         assert_eq!(profile.root_marked_by, []);
 
-        // Verify that `cwd_to_root` and `deny_subcommands` aren't going to do something surprising
+        // Verify that `deny_subcommands` isn't going to do something surprising
         let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
         assert!(profile.deny_subcommands.is_empty());
-        assert_eq!(profile.cwd_to_root, false);
 
         // Just to be thorough
         assert_eq!(profile.root_marked_by, [FileName::try_from("foo".to_owned()).unwrap()]);
