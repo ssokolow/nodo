@@ -1,6 +1,4 @@
-//! Configuration file schema and validation routines
-//!
-//! **TODO:** beta-read and improve `cargo doc` output.
+//! Configuration file schema and supplementary validation routines
 
 use std::collections::BTreeMap; // Used to preserve key ordering in Debug output
 
@@ -16,9 +14,15 @@ pub const DEFAULT_CONFIG: &str = include_str!("defaults.toml");
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize)]
 /// The schema for a single command's sandboxing profile, with "single command" defined as the
-/// value of `argv[0]` when it is being spawned as a subprocess.
+/// value of `argv[0]` as seen by the subprocess run inside the sandbox.
+///
+/// For the purposes of these rules, "subcommand" is defined as the value of `argv[1]` as seen by
+/// the subprocess run inside the sandbox.
 ///
 /// **TODO:** Consider replacing the bools with non-conflatable enums
+///
+/// **TODO:** Decide whether retrofitting smarter subcommand handling **later** would be
+/// a potential security risk.
 pub struct CommandProfile {
     /// If `true`, allow the sandboxed program unrestricted network communication.
     ///
@@ -30,13 +34,9 @@ pub struct CommandProfile {
     #[serde(default)]
     allow_network: bool,
 
-    /// A list of subcommands (currently defined as the first argument passed to the command) which
-    /// should be allowed unrestricted network access.
+    /// A list of subcommands which should be allowed unrestricted network access.
     ///
     /// This is useful for commands which must query package repositories or fetch dependencies.
-    ///
-    /// **TODO:** Decide whether retrofitting smarter subcommand handling later would be
-    /// a potential security risk.
     #[serde(default)]
     allow_network_subcommands: Vec<SubcommandName>,
 
@@ -47,24 +47,17 @@ pub struct CommandProfile {
     #[serde(default)]
     cwd_to_root: bool,
 
-    /// A list of subcommands (currently defined as the first argument passed to the command) which
-    /// should be rejected because, not only must they be run unsandboxed, their effects are
-    /// significant enough that the user should explicitly bypass the sandboxing wrapper to
-    /// indicate their intent.
-    ///
-    /// **TODO:** Decide whether retrofitting smarter subcommand handling later would be
-    /// a potential security risk.
+    /// A list of subcommands which should be rejected because, not only must they be run
+    /// unsandboxed, their effects are significant enough that the user should explicitly bypass
+    /// the sandboxing wrapper to indicate their intent.
     #[serde(default)]
     deny_subcommands: Vec<SubcommandName>,
 
-    /// A list of subcommands (currently defined as the first argument passed to the command) which
-    /// should treat the current working directory as the sandbox root.
+    /// A list of subcommands which should be invoked with the current working directory as the
+    /// sandbox root.
     ///
     /// For example, because they are used to create new projects, rather than operate on existing
-    /// ones.
-    ///
-    /// **TODO:** Decide whether retrofitting smarter subcommand handling later would be
-    /// a potential security risk.
+    /// ones, and will be run in locations where any `root_marked_by` matches will be spurious.
     #[serde(default)]
     projectless_subcommands: Vec<SubcommandName>,
 
@@ -87,15 +80,17 @@ pub struct CommandProfile {
     subcommand_aliases: BTreeMap<SubcommandName, SubcommandName>,
 }
 
-/// The schema for the configuration file which controls sandboxing behaviour
+/// The schema for the configuration file as a whole
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    /// A default list of root-relative paths to be denied access to. (The idea being to provide an
-    /// analogue to `chattr +a foo.log` so `git diff` can be used to reveal shenanigans)
+    /// A default list of root-relative paths to be denied access to.
+    ///
+    /// (The idea being to provide an analogue to `chattr +a foo.log` so `git diff` can be used to
+    /// reveal attempts by malware inside the sandbox to sneak malicious code into a commit.)
     #[serde(default)]
     root_blacklist: Vec<FileName>,
 
-    /// A list of mappings from command names (`argv[0]`) to the sandboxing profiles to use on them
+    /// A list of mappings from command names (`argv[0]`) to the sandboxing profiles to be applied
     #[serde(rename = "profile")]
     profiles: BTreeMap<CommandName, CommandProfile>,
 }
@@ -103,10 +98,8 @@ pub struct Config {
 impl Config {
     /// Perform validation beyond what Serde is maintainably capable of
     ///
-    /// (Implemented manually rather than adding [validator](https://github.com/Keats/validator)
+    /// (Implemented manually rather than accepting [validator](https://github.com/Keats/validator)
     /// as another point of trust in a tool meant to enforce security.)
-    ///
-    /// **TODO:** Switch to a better error type and don't stop at the first error.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.profiles.is_empty() {
             return Err("Configuration file must contain at least one profile");
