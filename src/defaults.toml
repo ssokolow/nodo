@@ -1,3 +1,54 @@
+# The set of Firejail flags that get applied to *all* profiles
+#
+# As flags in this list don't yet have more specific preferences which control
+# them, feel free to change this if you're working on projects which have
+# specialized needs. For example:
+#
+# - If you store your projects on removable media, remove `--blacklist=/media`
+# - If you need to play sounds, remove both `--nosound` and `--noautopulse`
+# - If you need access to serial ports, remove `--nogroups` since that is
+#   typically achieved via membership in the `dialout` group.
+# - If you need to display a GUI, remove `--no3d`, since
+#   modern GUI toolkits tend to use at least some degree of GPU acceleration.
+#
+# Conversely, if you feel these "Just Work™ in most cases" defaults aren't
+# strict enough, feel free to add flags to lock things down further or use
+# features added in newer Firejail releases.
+#
+# NOTE:
+# -  `--x11=none` cannot be included here by default because Firejail will
+#    refuse to start if you specify it without either setting your X server
+#    configuration to `-nolisten local` or passing Firejail a
+#    suitable `--net` flag, which is a per-profile choice.
+# -  `--nodbus` isn't used because using it with `--quiet` can lend a false
+#    sense of security.
+firejail_base_flags=[
+    # Directories outside what --whitelist affects which have a non-trivial
+    # chance of containing writable directories/files
+    "--blacklist=/media",
+    "--blacklist=/mnt",
+    "--blacklist=/run/media",
+    "--blacklist=/srv",
+    # ---------------------------------------------------------------------
+    "--caps.drop=all",
+    "--deterministic-exit-code",
+    "--ipc-namespace",
+    "--no3d",
+    "--nogroups",
+    "--nonewprivs",
+    "--noroot",
+    "--nosound",
+    "--noautopulse",
+    "--novideo",
+    "--nou2f",
+    "--private-dev",
+    "--private-tmp",
+    "--protocol=unix,inet,inet6,netlink",
+    "--seccomp",
+    "--shell=none",
+    "--quiet",
+]
+
 # Default list of paths (relative to the project root) to be denied
 # access to (The idea being to provide an analogue to `chattr +a foo.log`
 # so `git diff` can be used to reveal shenanigans)

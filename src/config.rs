@@ -76,6 +76,14 @@ pub struct CommandProfile {
 /// The schema for the configuration file as a whole
 #[derive(Debug, Deserialize)]
 pub struct Config {
+    /// A list of flags to pass to Firejail before the flags determined by the profile but after
+    /// the hard-coded flags generated to do things like blacklisting the sandboxing
+    /// configuration file.
+    ///
+    /// This field must be specified. If you *really* mean to specify a sandbox that's as full of
+    /// holes as Swiss cheese, explicitly use an empty list.
+    firejail_base_flags: Vec<String>,
+
     /// A default list of root-relative paths to be denied access to.
     ///
     /// (The idea being to provide an analogue to `chattr +a foo.log` so `git diff` can be used to
@@ -117,17 +125,23 @@ mod test {
     #[test]
     fn profiles_required() {
         toml::from_str::<Config>("").unwrap_err();
-        toml::from_str::<Config>("profile = {}").unwrap().validate().unwrap_err();
-        toml::from_str::<Config>("[profile.make]").unwrap_err();
-        toml::from_str::<Config>("[profile.make]\nroot_marked_by = []")
+        toml::from_str::<Config>("firejail_base_flags=[]\nprofile = {}")
             .unwrap()
             .validate()
             .unwrap_err();
-        toml::from_str::<Config>("[profile.make]\nroot_marked_by = [\"\"]").unwrap_err();
-        toml::from_str::<Config>("[profile.make]\nroot_marked_by = [\"Makefile\"]")
+        toml::from_str::<Config>("firejail_base_flags=[]\n[profile.make]").unwrap_err();
+        toml::from_str::<Config>("firejail_base_flags=[]\n[profile.make]\nroot_marked_by = []")
             .unwrap()
             .validate()
-            .unwrap();
+            .unwrap_err();
+        toml::from_str::<Config>("firejail_base_flags=[]\n[profile.make]\nroot_marked_by = [\"\"]")
+            .unwrap_err();
+        toml::from_str::<Config>(
+            "firejail_base_flags=[]\n[profile.make]\nroot_marked_by=[\"Makefile\"]",
+        )
+        .unwrap()
+        .validate()
+        .unwrap();
     }
 
     /// Assert that the field defaults for a profile are the most secure options
@@ -162,7 +176,7 @@ mod test {
     /// aren't going to undermine `.validate()`.
     #[test]
     fn unsurprising_toplevel_defaults() {
-        let config: Config = toml::from_str("profile = {}").unwrap();
+        let config: Config = toml::from_str("firejail_base_flags = []\nprofile = {}").unwrap();
         assert!(config.profiles.is_empty());
         assert!(config.root_blacklist.is_empty());
     }
