@@ -22,16 +22,18 @@ macro_rules! make_capability {
      $cap_desc: expr, $false_desc:expr, $true_desc:expr) => {
         #[doc=$cap_desc]
         #[derive(Copy, Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
-        #[serde(from="bool")]
+        #[serde(from = "bool")]
         pub enum $cap_name {
             #[doc=$false_desc]
             $false_variant,
             #[doc=$true_desc]
-            $true_variant
+            $true_variant,
         }
 
         impl Default for $cap_name {
-            fn default() -> Self { Self::$false_variant }
+            fn default() -> Self {
+                Self::$false_variant
+            }
         }
 
         impl From<bool> for $cap_name {
@@ -43,24 +45,28 @@ macro_rules! make_capability {
                 }
             }
         }
-    }
+    };
 }
 
 make_capability!(Network, ChildProcsOnly, AllNetworks,
     "Scope of network access",
     "Launch the program in its own network namespace so it can only communicate with subprocesses it launches.",
     "Allow unrestricted network communication.");
-make_capability!(ProjectRoot, Innermost, Outermost,
+make_capability!(
+    ProjectRoot,
+    Innermost,
+    Outermost,
     "Policy for identifying the project root directory",
     "Stop looking for the project root at the first match.",
-    "Ascend to the filesystem root and then use the most permissive match found.");
+    "Ascend to the filesystem root and then use the most permissive match found."
+);
 
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[derive(Deserialize)]
-    struct TestFields{
+    struct TestFields {
         #[serde(default)]
         network: Network,
         #[serde(default)]
@@ -70,7 +76,7 @@ mod test {
     /// Assert that the capability enums err on the side of security when under the influence of
     /// `serde(default)`
     #[test]
-    fn caps_have_safe_defaults(){
+    fn caps_have_safe_defaults() {
         let test_values: TestFields = toml::from_str("").unwrap();
         assert_eq!(test_values.network, Network::ChildProcsOnly);
         assert_eq!(test_values.project_root, ProjectRoot::Innermost);
@@ -81,7 +87,7 @@ mod test {
     /// This is mainly to re-state the `make_capability!` definitions in a different form so that,
     /// if a mistake is made, it has to be made twice in two different ways to slip past.)
     #[test]
-    fn caps_are_properly_mapped_to_bools(){
+    fn caps_are_properly_mapped_to_bools() {
         assert_eq!(Network::from(false), Network::ChildProcsOnly);
         assert_eq!(Network::from(true), Network::AllNetworks);
         assert_eq!(ProjectRoot::from(false), ProjectRoot::Innermost);

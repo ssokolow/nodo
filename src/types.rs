@@ -19,7 +19,7 @@ pub mod caps;
 /// apparent the need to do things like normalizing `argv[0]` before checking it.
 macro_rules! newtype {
     ($newtype:ident, $docstring:expr) => {
-        #[doc="Newtype for "]
+        #[doc = "Newtype for "]
         #[doc=$docstring]
         #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
         #[serde(try_from = "String")]
