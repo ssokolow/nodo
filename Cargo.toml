@@ -3,6 +3,7 @@ name = "nodo"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+repository="https://github.com/ssokolow/nodo/"
 description = "A simple wrapper for running Cargo and other build tools inside a Firejail sandbox tailored to the subcommand being run and the project being acted on"
 categories = ["command-line-utilities", "development-tools"]
 keywords = ["security", "sandboxing", "firejail"]
