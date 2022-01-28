@@ -19,8 +19,6 @@ pub const DEFAULT_CONFIG: &str = include_str!("defaults.toml");
 /// For the purposes of these rules, "subcommand" is defined as the value of `argv[1]` as seen by
 /// the subprocess run inside the sandbox.
 ///
-/// **TODO:** Consider replacing the bools with non-conflatable enums
-///
 /// **TODO:** Decide whether retrofitting smarter subcommand handling **later** would be
 /// a potential security risk.
 pub struct CommandProfile {
