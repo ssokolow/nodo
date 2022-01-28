@@ -54,6 +54,10 @@ fn print_help() {
             "    --write-conf    Save the active configuration to a file and report where it \n",
             "                    was saved via stdout.\n",
             "\n",
+            "<command> and [subcommand] will be used to look up a sandboxing profile in the\n",
+            "configuration file and then <command> [subcommand] [arguments] will be executed as\n",
+            "a subprocess inside a Firejail sandbox.\n",
+            "\n",
             "Please report any issues at {repo_url}"
         ),
         wrapper_bin = env!("CARGO_BIN_NAME"),
