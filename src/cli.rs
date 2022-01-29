@@ -40,19 +40,20 @@ fn print_help() {
             "{wrapper_desc}.\n",
             "\n",
             "USAGE:\n",
-            "    {wrapper_bin} [--debug|--] <command> [subcommand] [arguments]\n",
+            "    {wrapper_bin} [-d|--debug|--] <command> [subcommand] [arguments]\n",
             "\n",
-            "    {wrapper_bin} [--help|--version|--write-conf]\n",
+            "    {wrapper_bin} [-h|-V|--help|--version|--write-conf]\n",
             "\n",
             "OPTIONS:\n",
-            "    --              Don't interpret <command> as an option even if it's --debug\n",
-            "    --debug         Print information on the Firejail command being executed and\n",
-            "                    omit --quiet so that problems with sandboxing policies can\n",
-            "                    be diagnosed.\n",
-            "    --help          Print this help message to standard output\n",
-            "    --version       Print the version number to standard output\n",
-            "    --write-conf    Save the active configuration to a file and report where it \n",
-            "                    was saved via stdout.\n",
+            "        --            Don't interpret <command> as an option even if it's --debug\n",
+            "    -d, --debug       Print information on commands being executed and\n",
+            "                      omit --quiet from the Firejail command line so that problems\n",
+            "                      with sandboxing policies can\n",
+            "                      be diagnosed.\n",
+            "    -h, --help        Print this help message to standard output\n",
+            "    -V, --version     Print the version number to standard output\n",
+            "        --write-conf  Save the active configuration to a file and report where it \n",
+            "                      was saved via stdout.\n",
             "\n",
             "<command> and [subcommand] will be used to look up a sandboxing profile in the\n",
             "configuration file and then <command> [subcommand] [arguments] will be executed as\n",
@@ -82,7 +83,7 @@ pub fn parse_args(args: impl Iterator<Item = OsString>) -> Action {
             // Since we only inspect the first argument for this, removing it is enough
             child_argv.remove(0);
         },
-        Some("--debug") => {
+        Some("--debug" | "-d") => {
             debug = true;
             child_argv.remove(0);
         },
@@ -91,7 +92,7 @@ pub fn parse_args(args: impl Iterator<Item = OsString>) -> Action {
             print_help();
             return Action::Exit;
         },
-        Some("--version") => {
+        Some("--version" | "-V") => {
             // Needed by help2man
             println!("{}", env!("CARGO_PKG_VERSION"));
             return Action::Exit;
@@ -149,11 +150,23 @@ mod test {
     fn parse_args_debug_field() {
         // --debug sets ChildArgs.debug in position argv[1]
         assert_eq!(
+            test_args!("-d", "cargo", "run", "--", "--help"),
+            make_expected!(true, "cargo", "run", "--", "--help")
+        );
+        assert_eq!(
             test_args!("--debug", "cargo", "run", "--", "--help"),
             make_expected!(true, "cargo", "run", "--", "--help")
         );
 
-        // --debug is ignored in other positions
+        // -d/--debug is ignored in other positions
+        assert_eq!(
+            test_args!("cargo", "-d", "run", "--", "--help"),
+            make_expected!(false, "cargo", "-d", "run", "--", "--help")
+        );
+        assert_eq!(
+            test_args!("cargo", "run", "--", "-d"),
+            make_expected!(false, "cargo", "run", "--", "-d")
+        );
         assert_eq!(
             test_args!("cargo", "--debug", "run", "--", "--help"),
             make_expected!(false, "cargo", "--debug", "run", "--", "--help")
@@ -169,6 +182,7 @@ mod test {
     fn parse_args_recognizes_special_flags() {
         assert_eq!(test_args!(), Action::Exit);
         assert_eq!(test_args!("-h"), Action::Exit);
+        assert_eq!(test_args!("-V"), Action::Exit);
         assert_eq!(test_args!("--help"), Action::Exit);
         assert_eq!(test_args!("--version"), Action::Exit);
         assert_eq!(test_args!("--write-conf"), Action::WriteConf);
@@ -179,6 +193,7 @@ mod test {
     fn special_flags_are_positional() {
         // Special flags are ignored outside argv[1]
         assert_eq!(test_args!("foo", "-h"), make_expected!(false, "foo", "-h"));
+        assert_eq!(test_args!("foo", "-V"), make_expected!(false, "foo", "-V"));
         assert_eq!(test_args!("foo", "--help"), make_expected!(false, "foo", "--help"));
         assert_eq!(test_args!("foo", "--help"), make_expected!(false, "foo", "--help"));
         assert_eq!(test_args!("foo", "--version"), make_expected!(false, "foo", "--version"));
@@ -188,6 +203,9 @@ mod test {
         assert_eq!(test_args!("-h", "foo"), Action::Exit);
         assert_eq!(test_args!("-h", "--bar"), Action::Exit);
         assert_eq!(test_args!("-h", "--write-conf"), Action::Exit);
+        assert_eq!(test_args!("-V", "foo"), Action::Exit);
+        assert_eq!(test_args!("-V", "--bar"), Action::Exit);
+        assert_eq!(test_args!("-V", "--write-conf"), Action::Exit);
         assert_eq!(test_args!("--help", "foo"), Action::Exit);
         assert_eq!(test_args!("--help", "--bar"), Action::Exit);
         assert_eq!(test_args!("--help", "--write-conf"), Action::Exit);
@@ -202,7 +220,9 @@ mod test {
     /// Assert that `--` in the first position allows commands named after flags
     #[test]
     fn doubledash_escapes_flags() {
+        assert_eq!(test_args!("--", "-d"), make_expected!(false, "-d"));
         assert_eq!(test_args!("--", "-h"), make_expected!(false, "-h"));
+        assert_eq!(test_args!("--", "-V"), make_expected!(false, "-V"));
         assert_eq!(test_args!("--", "--help"), make_expected!(false, "--help"));
         assert_eq!(test_args!("--", "--version"), make_expected!(false, "--version"));
         assert_eq!(test_args!("--", "--write-conf"), make_expected!(false, "--write-conf"));
