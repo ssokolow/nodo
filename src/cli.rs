@@ -9,6 +9,8 @@ pub enum Action {
     Exit,
     /// Run the provided command in a sandbox.
     Sandbox(ChildArgs),
+    /// Print the configuration file path to stdout and exit
+    PathToConf,
     /// Write the active configuration file to disk and output the path written to.
     WriteConf,
     // TODO: Decide on the best way to present a listing of available profiles
@@ -42,11 +44,11 @@ fn print_help() {
             "USAGE:\n",
             "    {wrapper_bin} [-d|--debug|--] <command> [subcommand] [arguments]\n",
             "\n",
-            "    {wrapper_bin} [-h|-V|--help|--version|--write-conf]\n",
+            "    {wrapper_bin} [-h|-V|--help|--version|--conf-path|--write-conf]\n",
             "\n",
             "OPTIONS:\n",
             "        --            Treat all following arguments as part of the command to be\n",
-            "                      sandboxed. Due to how {wrapper_bin} parses the command-line,\n",
+            "                      sandboxed. Due to how {wrapper_bin} parses the command line,\n",
             "                      this is only necessary if <command> may have the same name\n",
             "                      as one of these options.\n",
             "    -d, --debug       Print information on commands being executed and\n",
@@ -54,6 +56,8 @@ fn print_help() {
             "                      with sandboxing policies can be diagnosed.\n",
             "    -h, --help        Print this help message to standard output\n",
             "    -V, --version     Print the version number to standard output\n",
+            "        --conf-path   Print the path where {wrapper_bin} will look for the\n",
+            "                      configuration file or write it if --write-conf is used.\n",
             "        --write-conf  Save the active configuration to a file and report where it \n",
             "                      was saved via stdout.\n",
             "\n",
@@ -88,6 +92,9 @@ pub fn parse_args(args: impl Iterator<Item = OsString>) -> Action {
         Some("--debug" | "-d") => {
             debug = true;
             child_argv.remove(0);
+        },
+        Some("--conf-path") => {
+            return Action::PathToConf;
         },
         None | Some("--help" | "-h") => {
             // No arguments, --help, or -h
@@ -179,7 +186,7 @@ mod test {
         );
     }
 
-    /// Assert that [`parse_args`] recognizes the "print and exit" conditions and `--write-conf`
+    /// Assert that [`parse_args`] recognizes the "print and exit" conditions and similar flags
     #[test]
     fn parse_args_recognizes_special_flags() {
         assert_eq!(test_args!(), Action::Exit);
@@ -187,6 +194,7 @@ mod test {
         assert_eq!(test_args!("-V"), Action::Exit);
         assert_eq!(test_args!("--help"), Action::Exit);
         assert_eq!(test_args!("--version"), Action::Exit);
+        assert_eq!(test_args!("--conf-path"), Action::PathToConf);
         assert_eq!(test_args!("--write-conf"), Action::WriteConf);
     }
 
@@ -199,6 +207,7 @@ mod test {
         assert_eq!(test_args!("foo", "--help"), make_expected!(false, "foo", "--help"));
         assert_eq!(test_args!("foo", "--help"), make_expected!(false, "foo", "--help"));
         assert_eq!(test_args!("foo", "--version"), make_expected!(false, "foo", "--version"));
+        assert_eq!(test_args!("foo", "--conf-path"), make_expected!(false, "foo", "--conf-path"));
         assert_eq!(test_args!("foo", "--write-conf"), make_expected!(false, "foo", "--write-conf"));
 
         // Special flags apply in argv[1] regardless of what follows
@@ -214,6 +223,9 @@ mod test {
         assert_eq!(test_args!("--version", "foo"), Action::Exit);
         assert_eq!(test_args!("--version", "--bar"), Action::Exit);
         assert_eq!(test_args!("--version", "--write-conf"), Action::Exit);
+        assert_eq!(test_args!("--conf-path", "foo"), Action::PathToConf);
+        assert_eq!(test_args!("--conf-path", "--bar"), Action::PathToConf);
+        assert_eq!(test_args!("--conf-path", "--help"), Action::PathToConf);
         assert_eq!(test_args!("--write-conf", "foo"), Action::WriteConf);
         assert_eq!(test_args!("--write-conf", "--bar"), Action::WriteConf);
         assert_eq!(test_args!("--write-conf", "--help"), Action::WriteConf);

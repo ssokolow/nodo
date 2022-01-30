@@ -1,6 +1,8 @@
 //! Configuration file schema and supplementary validation routines
 
 use std::collections::BTreeMap; // Used to ensure deterministic key ordering in Debug output
+use std::env;
+use std::path::PathBuf;
 
 use serde_derive::Deserialize;
 
@@ -10,6 +12,53 @@ use crate::types::{caps, CommandName, FileName, SubcommandName};
 ///
 /// **TODO:** Actually implement support for loading a non-default config file
 pub const DEFAULT_CONFIG: &str = include_str!("defaults.toml");
+
+/// Determine the path to load the configuration from or write it to
+///
+/// This implements the lookup for user-specific configuration files as defined by the
+/// [XDG Base Directory Specification
+/// v0.8](https://specifications.freedesktop.org/basedir-spec/basedir-spec-0.8.html)
+///
+/// Note that, at this time, `$XDG_CONFIG_DIRS` is not considered, because having a fallback chain
+/// on a sandboxing configuration file introduces a significant amount of complication
+/// for feeling confident in the design's safety for benefits not yet demonstrated to be
+/// worthwhile.
+pub fn find_path() -> Option<PathBuf> {
+    let config_file_name = format!("{}.toml", env!("CARGO_PKG_NAME"));
+
+    // First, check if $XDG_CONFIG_HOME contains a compliant path that meets our needs.
+    //
+    // That is, it must be non-empty, containing an absolute path to a directory which exists.
+    // We're relying on `PathBuf::is_absolute()` to reject empty strings.
+    if let Some(var_str) = env::var_os("XDG_CONFIG_HOME") {
+        let mut xdg_path = PathBuf::from(var_str);
+        if xdg_path.is_absolute() && xdg_path.is_dir() {
+            xdg_path.push(config_file_name);
+            return Some(xdg_path);
+        }
+    }
+
+    // Otherwise, fall back to $HOME/.config but double-check that it exists too
+    // (Better to error than to 'try to make it work' in a security tool)
+    //
+    // `env::home_dir` is deprecated for having unexpected behaviour on Windows.
+    // However, this is for Linux (it depends on cgroups via Firejail) and the algorithm listed
+    // under "Unix" is perfectly acceptable.
+    //
+    // (Not to mention that any other algorithm at least as good would require using `unsafe`,
+    // adding another external crate as a new opportunity for a supply-chain attack, or both.)
+    #[allow(deprecated)]
+    if let Some(mut path) = env::home_dir() {
+        path.push(".config");
+        if path.is_absolute() && path.is_dir() {
+            path.push(config_file_name);
+            return Some(path);
+        }
+    }
+
+    // If we reach here, we couldn't find an acceptable path
+    None
+}
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize)]

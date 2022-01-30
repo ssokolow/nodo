@@ -31,6 +31,19 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let config: config::Config = toml::from_str(config::DEFAULT_CONFIG)?;
     match action {
+        cli::Action::PathToConf => {
+            if let Some(path) = config::find_path() {
+                println!("{}", path.to_string_lossy());
+                return Ok(());
+            } else {
+                eprintln!(
+                    "CRITICAL FAILURE: Neither $XDG_CONFIG_HOME nor $HOME/.config are \
+                    absolute directory paths."
+                );
+                std::process::exit(1);
+                // TODO: Use a more consistent, less slipshod way to handle non-zero process exit
+            };
+        },
         cli::Action::WriteConf => todo!(),
         cli::Action::Sandbox(args) => {
             // TODO: Integration test this and use prettier human-readable output
