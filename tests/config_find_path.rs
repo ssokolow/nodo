@@ -162,6 +162,44 @@ fn accepts_valid_paths() {
     });
 }
 
+#[test]
+/// Assert that an invalid `$XDG_CONFIG_HOME` will fall back to a valid `$HOME` properly
+fn fallback_on_invalid() {
+    with_test_dir(line!(), |test_dir: &Path| {
+        let foo = ensure_dir(test_dir.join("foo"));
+        let foo_config = ensure_dir(foo.join(".config"));
+        let bar = test_dir.join("bar");
+        let baz = test_dir.join("baz");
+        fs::write(&baz, "Test File").unwrap();
+
+        assert_success!(
+            // Empty
+            output_for!(test_dir, XDG_CONFIG_HOME => "", HOME => &foo),
+            &foo_config
+        );
+        assert_success!(
+            // Relative dotdir
+            output_for!(test_dir, XDG_CONFIG_HOME => ".", HOME => &foo),
+            &foo_config
+        );
+        assert_success!(
+            // Relative non-dotdir
+            output_for!(test_dir, XDG_CONFIG_HOME => ".config", HOME => &foo),
+            &foo_config
+        );
+        assert_success!(
+            // Nonexistent
+            output_for!(test_dir, XDG_CONFIG_HOME => &bar, HOME => &foo),
+            &foo_config
+        );
+        assert_success!(
+            // File, not directory
+            output_for!(test_dir, XDG_CONFIG_HOME => &baz, HOME => &foo),
+            &foo_config
+        );
+    });
+}
+
 // TODO: Decide where std::fs::canonicalize fits into the intended semantics
 // (We want to canonicalize it before handing off to Firejail, but it might be surprising and/or
 // confusing if the text displayed to the user doesn't match what's in XDG_CONFIG_HOME or HOME)
