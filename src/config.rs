@@ -47,6 +47,15 @@ pub fn find_path() -> Option<PathBuf> {
     //
     // (Not to mention that any other algorithm at least as good would require using `unsafe`,
     // adding another external crate as a new opportunity for a supply-chain attack, or both.)
+    //
+    // Also, the recommended replacement has already seen some drama surrounding the maintainer
+    // feeling unable to continue and how they went about quitting, prompting a request
+    // (rust-lang/rust#71684, still open as of this writing) to consider un-deprecating
+    // `env::home_dir`.
+    //
+    // For this reason, I consider the third-party options unsuitable and the only viable
+    // replacement (`env::var_os("HOME")`) would be a strict downgrade, given that the Rust 1.0
+    // stability promise ensures `env::home_dir()` will stay around.
     #[allow(deprecated)]
     if let Some(mut path) = env::home_dir() {
         path.push(".config");
