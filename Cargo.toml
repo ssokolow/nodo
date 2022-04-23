@@ -9,8 +9,22 @@ categories = ["command-line-utilities", "development-tools"]
 keywords = ["security", "sandboxing", "firejail"]
 
 [dependencies]
+# Serde is used because I felt the maintainability benefit of being able to use
+# declarative deserialization and type-driven programming outweighed the danger
+# of depending on one of the most widely used crates in the ecosystem.
 serde = "1.0.131"
 serde_derive = "1.0.131"
+
+# toml-rs is used because I need *some* kind of configuration file syntax and
+# it is sufficiently mature and widely used that I felt this is the best
+# trade-off for maintainability.
 toml = "0.5.8"
+
+# All the code most vulnerable to subtle bugs having outsized consequences is
+# delegated to Firejail, which is absent here because it's invoked as
+# a subprocess.
+
+# Any further additions must have strong justifications, whether as crates or
+# subprocesses.
 
 [features]
