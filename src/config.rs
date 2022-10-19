@@ -4,7 +4,7 @@ use std::collections::BTreeMap; // Used to ensure deterministic key ordering in 
 use std::env;
 use std::path::PathBuf;
 
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 use crate::types::{caps, CommandName, FileName, SubcommandName};
 

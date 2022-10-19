@@ -2,7 +2,7 @@
 
 use std::path;
 
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 pub mod caps;
 

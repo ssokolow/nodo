@@ -1,6 +1,6 @@
 //! Capabilities (in the "POSIX capabilities" sense) that a configuration file may grant
 
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 /// Helper for creating newtypes for boolean sandbox permissions that should not be conflated
 ///
