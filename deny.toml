@@ -1,0 +1,21 @@
+# This project fundamentally depends on Linux cgroups via Firejail, and
+# is currently only actively tested on 64-bit x86 targets, so silence
+# warnings about transitive dependencies specific to other targets.
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-unknown-linux-musl" },
+]
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "warn"
+yanked = "warn"
+notice = "warn"
+
+[licenses]
+unlicensed = "deny"
+allow = ["MIT", "Apache-2.0"]
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
