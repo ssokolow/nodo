@@ -1,8 +1,10 @@
 version: 2
 updates:
-  - package-ecosystem: "cargo"
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
-      interval: "weekly"
-    reviewers:
-      - "ssokolow"
+      interval: "monthly"
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "monthly"
