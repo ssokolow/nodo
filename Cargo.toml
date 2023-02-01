@@ -17,7 +17,7 @@ serde = { version = "1.0.152", features = ["derive"] }
 # toml-rs is used because I need *some* kind of configuration file syntax and
 # it is sufficiently mature and widely used that I felt this is the best
 # trade-off for maintainability.
-toml = "0.5.10"
+toml = "0.7.1"
 
 # All the code most vulnerable to subtle bugs having outsized consequences is
 # delegated to Firejail, which is absent here because it's invoked as
