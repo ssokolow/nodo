@@ -35,7 +35,7 @@ name = "nodo"
 version = "0.1.0"
 dependencies = [
  "serde",
- "toml",
+ "toml_edit",
 ]
 
 [[package]]
@@ -103,18 +103,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "toml"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "772c1426ab886e7362aedf4abc9c0d1348a979517efedfc25862944d10137af0"
-dependencies = [
- "serde",
- "serde_spanned",
- "toml_datetime",
- "toml_edit",
 ]
 
 [[package]]

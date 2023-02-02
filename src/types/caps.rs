@@ -80,7 +80,7 @@ mod test {
     /// `serde(default)`
     #[test]
     fn caps_have_safe_defaults() {
-        let test_values: TestFields = toml::from_str("").unwrap();
+        let test_values: TestFields = toml_edit::de::from_str("").unwrap();
         assert_eq!(test_values.network, Network::ChildProcsOnly);
         assert_eq!(test_values.project_root, ProjectRoot::Innermost);
     }

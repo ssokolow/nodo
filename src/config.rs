@@ -5,6 +5,7 @@ use std::env;
 use std::path::PathBuf;
 
 use serde::Deserialize;
+use toml_edit::de::from_str as toml_from_str;
 
 use crate::types::{caps, CommandName, FileName, SubcommandName};
 
@@ -180,19 +181,19 @@ mod test {
     /// and that `.validate()` will reject empty `Vec`s.
     #[test]
     fn profiles_required() {
-        toml::from_str::<Config>("").unwrap_err();
-        toml::from_str::<Config>("firejail_base_flags=[]\nprofile = {}")
+        toml_from_str::<Config>("").unwrap_err();
+        toml_from_str::<Config>("firejail_base_flags=[]\nprofile = {}")
             .unwrap()
             .validate()
             .unwrap_err();
-        toml::from_str::<Config>("firejail_base_flags=[]\n[profile.make]").unwrap_err();
-        toml::from_str::<Config>("firejail_base_flags=[]\n[profile.make]\nroot_marked_by = []")
+        toml_from_str::<Config>("firejail_base_flags=[]\n[profile.make]").unwrap_err();
+        toml_from_str::<Config>("firejail_base_flags=[]\n[profile.make]\nroot_marked_by = []")
             .unwrap()
             .validate()
             .unwrap_err();
-        toml::from_str::<Config>("firejail_base_flags=[]\n[profile.make]\nroot_marked_by = [\"\"]")
+        toml_from_str::<Config>("firejail_base_flags=[]\n[profile.make]\nroot_marked_by = [\"\"]")
             .unwrap_err();
-        toml::from_str::<Config>(
+        toml_from_str::<Config>(
             "firejail_base_flags=[]\n[profile.make]\nroot_marked_by=[\"Makefile\"]",
         )
         .unwrap()
@@ -203,7 +204,7 @@ mod test {
     /// Assert that the field defaults for a profile are the most secure options
     #[test]
     fn safe_profile_defaults() {
-        let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
+        let profile: CommandProfile = toml_from_str("root_marked_by=[\"foo\"]").unwrap();
 
         assert_eq!(profile.allow_network, caps::Network::ChildProcsOnly);
         assert!(profile.allow_network_subcommands.is_empty());
@@ -217,11 +218,11 @@ mod test {
     #[test]
     fn unsurprising_profile_defaults() {
         // Verify that the default for `root_marked_by` isn't going to undermine .validate()
-        let profile: CommandProfile = toml::from_str("root_marked_by=[]").unwrap();
+        let profile: CommandProfile = toml_from_str("root_marked_by=[]").unwrap();
         assert_eq!(profile.root_marked_by, []);
 
         // Verify that `deny_subcommands` isn't going to do something surprising
-        let profile: CommandProfile = toml::from_str("root_marked_by=[\"foo\"]").unwrap();
+        let profile: CommandProfile = toml_from_str("root_marked_by=[\"foo\"]").unwrap();
         assert!(profile.deny_subcommands.is_empty());
 
         // Just to be thorough
@@ -232,7 +233,7 @@ mod test {
     /// aren't going to undermine `.validate()`.
     #[test]
     fn unsurprising_toplevel_defaults() {
-        let config: Config = toml::from_str("firejail_base_flags = []\nprofile = {}").unwrap();
+        let config: Config = toml_from_str("firejail_base_flags = []\nprofile = {}").unwrap();
         assert!(config.profiles.is_empty());
         assert!(config.root_blacklist.is_empty());
     }

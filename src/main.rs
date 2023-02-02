@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let config: config::Config = toml::from_str(config::DEFAULT_CONFIG)?;
+    let config: config::Config = toml_edit::de::from_str(config::DEFAULT_CONFIG)?;
     match action {
         cli::Action::PathToConf => {
             if let Some(path) = config::find_path() {
