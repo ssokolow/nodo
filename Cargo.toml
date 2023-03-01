@@ -13,7 +13,7 @@ keywords = ["security", "sandboxing", "firejail"]
 # declarative deserialization and type-driven programming outweighed the danger
 # of depending on one of the most widely used crates in the ecosystem.
 serde = { version = "1.0.152", features = ["derive"] }
-toml_edit = { version = "0.19.1", features = ["serde"] }
+toml_edit = { version = "0.19.4", features = ["serde"] }
 
 # toml_edit is used because I need *some* kind of configuration file syntax and
 # it is sufficiently mature and widely used that I felt this is the best
