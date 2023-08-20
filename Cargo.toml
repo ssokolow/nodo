@@ -12,13 +12,17 @@ keywords = ["security", "sandboxing", "firejail"]
 # Serde is used because I felt the maintainability benefit of being able to use
 # declarative deserialization and type-driven programming outweighed the danger
 # of depending on one of the most widely used crates in the ecosystem.
-serde = { version = "1.0.180", features = ["derive"] }
-toml_edit = { version = "0.19.14", features = ["serde"] }
+#
+# However, it's also pinned at an older version until either dtolnay
+# reconsiders hacking in a precompiled, non-reproducible proc macro or
+# an alternative with comparable TOML support arises.
+serde = { version = "1.0.168, <=1.0.171", features = ["derive"] }
 
 # toml_edit is used because I need *some* kind of configuration file syntax and
 # it is sufficiently mature and widely used that I felt this is the best
 # trade-off for maintainability. (And I might as well bypass toml-rs to reduce
 # my dependency load now that it's built on toml_edit.)
+toml_edit = { version = "0.19.14", features = ["serde"] }
 
 # All the code most vulnerable to subtle bugs having outsized consequences is
 # delegated to Firejail, which is absent here because it's invoked as
