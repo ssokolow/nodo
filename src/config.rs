@@ -4,7 +4,7 @@ use std::collections::BTreeMap; // Used to ensure deterministic key ordering in 
 use std::env;
 use std::path::PathBuf;
 
-use serde::Deserialize;
+use serde_derive::Deserialize;
 use toml_edit::de::from_str as toml_from_str;
 
 use crate::types::{caps, CommandName, FileName, SubcommandName};
