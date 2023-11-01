@@ -20,5 +20,5 @@ allow = ["MIT", "Apache-2.0", "Unicode-DFS-2016"]
 multiple-versions = "allow"
 wildcards = "deny"
 deny = [
-    { name = "serde_derive", version = ">=1.0.172" }
+    { name = "serde_derive", version = ">=1.0.172, <1.0.184" }
 ]
