@@ -20,7 +20,7 @@ serde = { version = "1.0.168, <=1.0.171" }
 
 # serde_derive is listed separately instead of going through serde's `derive`
 # feature as a hack that parallelizes the build process more.
-serde_derive = { version = "1.0.152, <=1.0.171" }
+serde_derive = { version = "1.0.190" }
 
 # toml_edit is used because I need *some* kind of configuration file syntax and
 # it is sufficiently mature and widely used that I felt this is the best
