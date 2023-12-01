@@ -12,10 +12,6 @@ keywords = ["security", "sandboxing", "firejail"]
 # Serde is used because I felt the maintainability benefit of being able to use
 # declarative deserialization and type-driven programming outweighed the danger
 # of depending on one of the most widely used crates in the ecosystem.
-#
-# However, it's also pinned at an older version until either dtolnay
-# reconsiders hacking in a precompiled, non-reproducible proc macro or
-# an alternative with comparable TOML support arises.
 serde = { version = "1.0.190" }
 
 # serde_derive is listed separately instead of going through serde's `derive`
@@ -31,6 +27,10 @@ toml_edit = { version = "0.21.0", features = ["serde"] }
 # All the code most vulnerable to subtle bugs having outsized consequences is
 # delegated to Firejail, which is absent here because it's invoked as
 # a subprocess.
+#
+# I'd also like evaluate switching to depending on Bubblewrap since it has
+# a smaller attack surface (less code running in a SUID binary) and is more
+# likely to already be installed for use by Flatpak.
 
 # Any further additions must have strong justifications, whether as crates or
 # subprocesses.
