@@ -12,7 +12,7 @@ keywords = ["security", "sandboxing", "firejail"]
 # Serde is used because I felt the maintainability benefit of being able to use
 # declarative deserialization and type-driven programming outweighed the danger
 # of depending on one of the most widely used crates in the ecosystem.
-serde = { version = "1.0.217" }
+serde = { version = "1.0.218" }
 
 # serde_derive is listed separately instead of going through serde's `derive`
 # feature as a hack that parallelizes the build process more.
