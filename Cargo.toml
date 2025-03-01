@@ -22,7 +22,7 @@ serde_derive = { version = "1.0.190" }
 # it is sufficiently mature and widely used that I felt this is the best
 # trade-off for maintainability. (And I might as well bypass toml-rs to reduce
 # my dependency load now that it's built on toml_edit.)
-toml_edit = { version = "0.22.23", features = ["serde"] }
+toml_edit = { version = "0.22.24", features = ["serde"] }
 
 # All the code most vulnerable to subtle bugs having outsized consequences is
 # delegated to Firejail, which is absent here because it's invoked as
