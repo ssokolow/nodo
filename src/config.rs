@@ -31,7 +31,7 @@ pub fn find_path() -> Option<PathBuf> {
     //
     // That is, it must be non-empty, containing an absolute path to a directory which exists.
     // We're relying on `PathBuf::is_absolute()` to reject empty strings.
-    if let Some(var_str) = env::var_os("XDG_CONFIG_HOME") {
+    if let Some(var_str) = env::var_os("XDG_CONFIG_HOME") && !var_str.is_empty() {
         let mut xdg_path = PathBuf::from(var_str);
         if xdg_path.is_absolute() && xdg_path.is_dir() {
             xdg_path.push(config_file_name);
